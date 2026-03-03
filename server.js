@@ -1,49 +1,69 @@
-// server.js
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const fetch = require('node-fetch'); // if using Node 18+, can use global fetch
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Replace this with your Netlify frontend URL
-const FRONTEND_URL = 'https://your-netlify-site.netlify.app';
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'https://dmarsystems.com',
+  'https://www.dmarsystems.com'
+];
 
 app.use(cors({
-  origin: FRONTEND_URL
+  origin: (origin, cb) => {
+    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+    return cb(new Error('CORS blocked: ' + origin));
+  }
 }));
+
 app.use(express.json());
 
-// HEALTH CHECK
 app.get('/', (req, res) => {
   res.json({ status: 'DMARS AI backend running' });
 });
 
-// CHAT ENDPOINT
 app.post('/api/chat', async (req, res) => {
   try {
     const userMessage = req.body.message;
-    if (!userMessage) return res.status(400).json({ error: 'Message is required' });
+    if (!userMessage) {
+      return res.status(400).json({ error: 'Message is required' });
+    }
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: userMessage }] }],
-          generationConfig: { temperature: 0.3, maxOutputTokens: 800 }
-        })
-      }
-    );
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+
+    const start = Date.now();
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: userMessage }] }],
+        generationConfig: {
+          temperature: 0.3,
+          maxOutputTokens: 400
+        }
+      })
+    });
+
+    console.log(`Gemini latency: ${Date.now() - start}ms`);
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error('Gemini API error:', errText);
+      return res.status(502).json({ error: 'Gemini API error' });
+    }
 
     const data = await response.json();
 
-    const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text ||
-                  "Sorry, I couldn’t generate a response.";
+    const reply =
+      data?.candidates?.[0]?.content?.parts?.[0]?.text ||
+      "Sorry, I couldn't generate a response.";
 
     res.json({ reply });
+
   } catch (error) {
     console.error('Chat error:', error);
     res.status(500).json({ error: 'Internal server error' });
