@@ -9,7 +9,9 @@ const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
   'https://dmarsystems.com',
-  'https://www.dmarsystems.com'
+  'https://www.dmarsystems.com',
+  'https://dmarssystems.com',
+  'https://www.dmarssystems.com'
 ];
 
 app.use(cors({
