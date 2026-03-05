@@ -9,7 +9,7 @@ const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
   'https://dmarsystems.com',
-  'https://www.dmarsystems.com',
+  'https://www.dmarssystems.com',
   'https://dmarssystems.com',
   'https://www.dmarssystems.com'
 ];
@@ -34,35 +34,32 @@ app.post('/api/chat', async (req, res) => {
       return res.status(400).json({ error: 'Message is required' });
     }
 
-const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
-
     const start = Date.now();
 
-    const response = await fetch(url, {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
+      },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: userMessage }] }],
-        generationConfig: {
-          temperature: 0.3,
-          maxOutputTokens: 400
-        }
+        model: 'llama-3.1-8b-instant',
+        messages: [{ role: 'user', content: userMessage }],
+        max_tokens: 400,
+        temperature: 0.3
       })
     });
 
-    console.log(`Gemini latency: ${Date.now() - start}ms`);
+    console.log(`Groq latency: ${Date.now() - start}ms`);
 
     if (!response.ok) {
       const errText = await response.text();
-      console.error('Gemini API error:', errText);
-      return res.status(502).json({ error: 'Gemini API error' });
+      console.error('Groq API error:', errText);
+      return res.status(502).json({ error: 'Groq API error' });
     }
 
     const data = await response.json();
-
-    const reply =
-      data?.candidates?.[0]?.content?.parts?.[0]?.text ||
-      "Sorry, I couldn't generate a response.";
+    const reply = data?.choices?.[0]?.message?.content || "Sorry, I couldn't generate a response.";
 
     res.json({ reply });
 
