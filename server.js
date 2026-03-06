@@ -8,8 +8,9 @@ const PORT = process.env.PORT || 3000;
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
+  'https://dmarsystems.netlify.app',
   'https://dmarsystems.com',
-  'https://www.dmarssystems.com',
+  'https://www.dmarsystems.com',
   'https://dmarssystems.com',
   'https://www.dmarssystems.com'
 ];
@@ -24,15 +25,22 @@ app.use(cors({
 app.use(express.json());
 
 app.get('/', (req, res) => {
-  res.json({ status: 'DMARS AI backend running' });
+  res.json({ status: 'DMARS AI backend running ✅' });
 });
 
 app.post('/api/chat', async (req, res) => {
   try {
-    const userMessage = req.body.message;
-    if (!userMessage) {
-      return res.status(400).json({ error: 'Message is required' });
-    }
+    const { message: userMessage, history = [] } = req.body;
+    if (!userMessage) return res.status(400).json({ error: 'Message is required' });
+
+    const messages = [
+      {
+        role: 'system',
+        content: `You are DMARS AI, the intelligent assistant for DMARS Technologies — a digital solutions company specializing in web development, digital marketing, AI chatbots, lead handling systems, and business automation. Be professional, helpful, and concise. Represent DMARS positively. Services include: web apps, landing pages, Meta Ads, AI chatbots, WhatsApp automation, and demand-to-revenue systems.`
+      },
+      ...history.slice(-10),
+      { role: 'user', content: userMessage }
+    ];
 
     const start = Date.now();
 
@@ -44,7 +52,7 @@ app.post('/api/chat', async (req, res) => {
       },
       body: JSON.stringify({
         model: 'llama-3.1-8b-instant',
-        messages: [{ role: 'user', content: userMessage }],
+        messages,
         max_tokens: 400,
         temperature: 0.3
       })
@@ -60,7 +68,6 @@ app.post('/api/chat', async (req, res) => {
 
     const data = await response.json();
     const reply = data?.choices?.[0]?.message?.content || "Sorry, I couldn't generate a response.";
-
     res.json({ reply });
 
   } catch (error) {
