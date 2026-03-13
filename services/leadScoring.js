@@ -1,20 +1,51 @@
-function scoreLead(message, currentScore = 0) {
-  const text = message.toLowerCase();
-  let score = currentScore;
+'use strict';
 
-  if (text.includes('ai')) score += 10;
-  if (text.includes('automation')) score += 20;
-  if (text.includes('pricing') || text.includes('price') || text.includes('cost')) score += 30;
-  if (text.includes('consultation') || text.includes('consult') || text.includes('strategy call')) score += 50;
-  if (text.includes('book') || text.includes('schedule a call')) score += 100;
+/* ─────────────────────────────────────────
+   Scoring rules — each keyword group has weight + word boundary check
+───────────────────────────────────────── */
+const SCORING_RULES = [
+  { pattern: /\bai\b/i,                                           points: 10 },
+  { pattern: /\bautomation\b/i,                                   points: 20 },
+  { pattern: /\b(pricing|price|cost|how much)\b/i,                points: 30 },
+  { pattern: /\b(consultation|consult|strategy call|discovery)\b/i, points: 50 },
+  { pattern: /\b(book|schedule a call|schedule a demo)\b/i,       points: 100 },
+  { pattern: /\b(ready to start|let's go|sign me up|get started)\b/i, points: 80 },
+  { pattern: /\b(chatbot|whatsapp|lead generation|landing page)\b/i, points: 15 },
+];
 
-  let status = 'Cold';
-  if (score > 100) status = 'Qualified';
-  else if (score >= 80) status = 'Hot';
-  else if (score >= 50) status = 'Warm';
-  else if (score >= 20) status = 'Curious';
+const MAX_SCORE = 500;
 
-  return { score, status };
+const STATUS_THRESHOLDS = [
+  { min: 101, label: 'Qualified' },
+  { min: 80,  label: 'Hot'       },
+  { min: 50,  label: 'Warm'      },
+  { min: 20,  label: 'Curious'   },
+  { min: 0,   label: 'Cold'      },
+];
+
+function getStatus(score) {
+  for (const threshold of STATUS_THRESHOLDS) {
+    if (score >= threshold.min) return threshold.label;
+  }
+  return 'Cold';
 }
 
-module.exports = { scoreLead };
+function scoreLead(message, currentScore = 0) {
+  if (typeof message !== 'string') return { score: currentScore, status: getStatus(currentScore) };
+
+  let delta = 0;
+
+  for (const rule of SCORING_RULES) {
+    if (rule.pattern.test(message)) {
+      delta += rule.points;
+    }
+  }
+
+  // ✅ Fixed: cap score, floor at 0
+  const score  = Math.min(MAX_SCORE, Math.max(0, currentScore + delta));
+  const status = getStatus(score);
+
+  return { score, status, delta };
+}
+
+module.exports = { scoreLead, getStatus };
