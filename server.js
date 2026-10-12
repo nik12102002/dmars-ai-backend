@@ -8,11 +8,11 @@ const PORT = process.env.PORT || 3000;
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
-  'https://dmarsystems.netlify.app',
-  'https://dmarsystems.com',
-  'https://www.dmarsystems.com',
-  'https://dmarssystems.com',
-  'https://www.dmarssystems.com'
+  'https://dmarsystem.netlify.app',
+  'https://dmarsystem.com',
+  'https://www.dmarsystem.com',
+  'https://dmarssystem.com',
+  'https://www.dmarssystem.com'
 ];
 
 app.use(cors({
